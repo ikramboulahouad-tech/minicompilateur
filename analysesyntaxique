@@ -1,0 +1,197 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class analysesyntaxique {
+
+    static String[] tokens;
+    static int position = 0;
+    static boolean erreur = false;
+
+    static String courant() {
+        if (position >= tokens.length) return "#";
+        return tokens[position];
+    }
+
+    static void ts() {
+        position++;
+    }
+
+    static void Z() { // S → DECLS WhileInstr | WhileInstr
+        if (courant().equals("int") || courant().equals("float") || courant().equals("char")) {
+            DECLS();
+            WhileInstr();
+        } else {
+            WhileInstr();
+        }
+
+        if (courant().equals("#") && !erreur) {
+            System.out.println("Chaîne correcte");
+        } else {
+            System.out.println("Chaîne incorrecte");
+        }
+    }
+
+    // DECLS → DeclVar DECLS | ε
+    static void DECLS() {
+        while (courant().equals("int") || courant().equals("float") || courant().equals("char")) {
+            DeclVar();
+        }
+    }
+
+    // DeclVar → Type Ident = EXPR ; | Type Ident ;
+    static void DeclVar() {
+        Type();
+        Ident();
+        if (courant().equals("=")) {
+            ts();
+            EXPR();
+        }
+        if (courant().equals(";")) {
+            ts();
+        } else {
+            erreur("Point-virgule attendu après déclaration");
+        }
+    }
+
+    // Type → int | float | char
+    static void Type() {
+        if (courant().equals("int") || courant().equals("float") || courant().equals("char")) {
+            ts();
+        } else {
+            erreur("Type attendu (int, float, char)");
+        }
+    }
+
+    // WhileInstr → while ( COND ) Block
+    static void WhileInstr() {
+        if (courant().equals("while")) {
+            ts();
+            if (courant().equals("(")) {
+                ts();
+                COND();
+                if (courant().equals(")")) {
+                    ts();
+                    Block();
+                } else erreur("Parenthèse fermante ')' attendue");
+            } else erreur("Parenthèse ouvrante '(' attendue");
+        } else erreur("'while' attendu");
+    }
+
+    // COND → COND_SIMPLE COND'
+    static void COND() {
+        COND_SIMPLE();
+        CONDprime();
+    }
+
+    // COND' → && COND_SIMPLE COND' | || COND_SIMPLE COND' | ε
+    static void CONDprime() {
+        while (courant().equals("&&") || courant().equals("||")) {
+            ts();
+            COND_SIMPLE();
+        }
+    }
+
+    // COND_SIMPLE → EXPR RELOP EXPR
+    static void COND_SIMPLE() {
+        EXPR();
+        RELOP();
+        EXPR();
+    }
+
+    // RELOP → < | > | <= | >= | == | !=
+    static void RELOP() {
+        if (courant().matches("<|>|<=|>=|==|!=")) {
+            ts();
+        } else erreur("Opérateur de comparaison attendu");
+    }
+
+    // Block → { INSTS }
+    static void Block() {
+        if (courant().equals("{")) {
+            ts();
+            INSTS();
+            if (courant().equals("}")) ts();
+            else erreur("Accolade fermante '}' attendue");
+        } else erreur("Accolade ouvrante '{' attendue");
+    }
+
+    // INSTS → INST INSTS | ε
+    static void INSTS() {
+        while (!courant().equals("}") && !courant().equals("#")) {
+            INST();
+        }
+    }
+
+    // INST → WhileInstr | DeclVar | Affectation | Incrémentation
+    static void INST() {
+        if (courant().equals("while")) WhileInstr();
+        else if (courant().equals("int") || courant().equals("float") || courant().equals("char")) DeclVar();
+        else if (Character.isLetter(courant().charAt(0))) {
+            String ident = courant();
+            ts();
+            if (courant().equals("=")) {
+                ts();
+                EXPR();
+                if (courant().equals(";")) ts();
+                else erreur("Point-virgule attendu après affectation");
+            } else if (courant().equals("++") || courant().equals("--")) {
+                ts();
+                if (courant().equals(";")) ts();
+                else erreur("Point-virgule attendu après incrémentation");
+            } else erreur("Opération attendue après identificateur");
+        } else erreur("Instruction invalide");
+    }
+
+    // EXPR → TERM EXPR'
+    static void EXPR() {
+        TERM();
+        while (courant().equals("+") || courant().equals("-")) {
+            ts();
+            TERM();
+        }
+    }
+
+    // TERM → FACTOR TERM'
+    static void TERM() {
+        FACTOR();
+        while (courant().equals("*") || courant().equals("/")) {
+            ts();
+            FACTOR();
+        }
+    }
+
+    // FACTOR → Ident | Nombre | ( EXPR ) | Ident ++ | Ident -- | ++ Ident | -- Ident
+    static void FACTOR() {
+        if (Character.isLetter(courant().charAt(0))) {
+            Ident();
+            if (courant().equals("++") || courant().equals("--")) ts();
+        } else if (Character.isDigit(courant().charAt(0))) {
+            Nombre();
+        } else if (courant().equals("(")) {
+            ts();
+            EXPR();
+            if (courant().equals(")")) ts();
+            else erreur("Parenthèse fermante ')' attendue");
+        } else if (courant().equals("++") || courant().equals("--")) {
+            ts();
+            Ident();
+        } else erreur("Facteur invalide");
+    }
+
+    static void Ident() {
+        if (Character.isLetter(courant().charAt(0))) ts();
+        else erreur("Identificateur attendu");
+    }
+
+    static void Nombre() {
+        if (Character.isDigit(courant().charAt(0))) ts();
+        else erreur("Nombre attendu");
+    }
+
+    static void erreur(String msg) {
+        System.out.println("Erreur : " + msg + " à '" + courant() + "'");
+        erreur = true;
+    }
+
+ 
+}
